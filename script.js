@@ -1,32 +1,41 @@
 const fs = require('fs').promises;
 const path = require('path');
-const pdf = require('pdf-parse');
+const { createWorker } = require('tesseract.js');
+const { PDFDocument } = require('pdf-lib');
+const { execSync } = require('child_process');
 
-async function extractPdfInfo(filePath) {
+async function extractPdfInfoWithOCR(filePath) {
   try {
-    const dataBuffer = await fs.readFile(filePath);
-    const data = await pdf(dataBuffer);
+    // Extrahiere die erste Seite als Bild (nutzt pdftoppm, muss installiert sein)
+    const tempImage = '/tmp/ocr_temp.png';
+    execSync(`pdftoppm -f 1 -singlefile -png "${filePath}" "/tmp/ocr_temp"`);
 
-    // Titel aus Metadaten oder erste Zeile aus Text
-    let title = data.info && data.info.Title ? data.info.Title : null;
-    if (!title && data.text) {
-      title = data.text.split('\n').find(line => line.trim().length > 0) || 'Unbekannt';
-    }
+    // OCR mit Tesseract.js
+    const worker = await createWorker('deu');
+    await worker.load();
+    await worker.loadLanguage('deu');
+    await worker.initialize('deu');
+    const { data: { text } } = await worker.recognize(tempImage);
+    await worker.terminate();
+
+    // Titel: erste nicht-leere Zeile
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    let title = lines[0] || 'Unbekannt';
     title = title.replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 30);
 
-    // Datum aus Metadaten oder aktuelles Datum
+    // Datum suchen (z.B. 20.08.2025)
+    const dateMatch = text.match(/(\d{2}\.\d{2}\.\d{4})/);
     let dateStr = '';
-    if (data.info && data.info.CreationDate) {
-      // PDF-Datum formatieren (z.B. D:20230820120000Z)
-      const match = data.info.CreationDate.match(/D:(\d{4})(\d{2})(\d{2})/);
-      if (match) {
-        dateStr = `${match[1]}-${match[2]}-${match[3]}`;
-      }
+    if (dateMatch) {
+      const [d, m, y] = dateMatch[1].split('.');
+      dateStr = `${y}-${m}-${d}`;
+    } else {
+      dateStr = new Date().toISOString().slice(0, 10);
     }
-    
+
     return { title, dateStr };
   } catch (err) {
-    console.error(`Fehler beim Auslesen von ${filePath}:`, err);
+    console.error(`Fehler bei OCR für ${filePath}:`, err);
     return { title: 'Unbekannt', dateStr: new Date().toISOString().slice(0, 10) };
   }
 }
@@ -41,8 +50,8 @@ async function moveFilesWithRente() {
       if (file.includes('Rente') && file.endsWith('.pdf')) {
         const sourceFile = path.join(sourceDir, file);
 
-        // Titel und Datum extrahieren
-        const { title, dateStr } = await extractPdfInfo(sourceFile);
+        // Titel und Datum per OCR extrahieren
+        const { title, dateStr } = await extractPdfInfoWithOCR(sourceFile);
 
         // Neuen Dateinamen bauen
         const newFileName = `${dateStr}_${title}.pdf`;
