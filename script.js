@@ -10,10 +10,8 @@ async function extractPdfInfoWithOCR(filePath) {
     const tempImage = '/tmp/ocr_temp.png';
     execSync(`pdftoppm -f 1 -singlefile -png "${filePath}" "/tmp/ocr_temp"`);
 
-    // OCR mit Tesseract.js
+    // OCR mit Tesseract.js (aktuelle Syntax)
     const worker = await createWorker('deu');
-    await worker.load();
-    await worker.loadLanguage('deu');
     await worker.initialize('deu');
     const { data: { text } } = await worker.recognize(tempImage);
     await worker.terminate();
