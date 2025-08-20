@@ -1,1 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Taschenrechner</title>
+</head>
+<body>
+    <form id="meinFormular">
+    <input type="text" id="nameInput" placeholder="Dein Name" />
+    <button type="submit">Jetzt berechnen</button>
+</form>
+<div id="ergebnis"></div>
+<script>
+function gaussRandom(mean, stdDev) {
+    let u = 0, v = 0;
+    while(u === 0) u = Math.random(); // [0,1) ausschließen
+    while(v === 0) v = Math.random();
+    let num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    return num * stdDev + mean;
+}
 
+document.getElementById('meinFormular').addEventListener('submit', function(e) {
+    e.preventDefault();
+    let name = document.getElementById('nameInput').value;
+    // Schwerpunkt auf 15, Standardabweichung 3 (meiste Werte zwischen 10 und 20)
+    let pSize = Math.round(gaussRandom(15, 5));
+    // Begrenzung auf 1 bis 50
+    pSize = Math.max(1, Math.min(50, pSize));
+    document.getElementById('ergebnis').textContent = name + ', deine Länge ist: ' + pSize + 'cm';
+});
+</script>
+</body>
+</html>
