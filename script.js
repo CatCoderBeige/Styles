@@ -47,7 +47,7 @@ async function moveFilesWithRente() {
   try {
     const files = await fs.readdir(sourceDir);
     for (const file of files) {
-      if (file.includes('Rente') && file.endsWith('.pdf')) {
+      if (file.endsWith('.pdf')) {
         const sourceFile = path.join(sourceDir, file);
 
         // Titel und Datum per OCR extrahieren
@@ -55,16 +55,20 @@ async function moveFilesWithRente() {
 
         // Neuen Dateinamen bauen
         const newFileName = `${dateStr}_${title}.pdf`;
-        const targetFile = path.join(targetDir, newFileName);
 
-        try {
-          await fs.rename(sourceFile, targetFile);
-          console.log(`Datei verschoben und umbenannt: ${newFileName}`);
-        } catch (err) {
-          if (err.code === 'EXDEV') {
-            await moveAcrossDevices(sourceFile, targetFile);
-          } else {
-            console.error(`Fehler beim Verschieben von ${file}:`, err);
+        // Jetzt prüfen, ob der neue Name "Rente" enthält
+        if (newFileName.toLowerCase().includes('rente')) {
+          const targetFile = path.join(targetDir, newFileName);
+
+          try {
+            await fs.rename(sourceFile, targetFile);
+            console.log(`Datei verschoben und umbenannt: ${newFileName}`);
+          } catch (err) {
+            if (err.code === 'EXDEV') {
+              await moveAcrossDevices(sourceFile, targetFile);
+            } else {
+              console.error(`Fehler beim Verschieben von ${file}:`, err);
+            }
           }
         }
       }
