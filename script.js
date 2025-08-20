@@ -6,22 +6,23 @@ const { execSync } = require('child_process');
 
 async function extractPdfInfoWithOCR(filePath) {
   try {
-    // Extrahiere die erste Seite als Bild (nutzt pdftoppm, muss installiert sein)
     const tempImage = '/tmp/ocr_temp.png';
     execSync(`pdftoppm -f 1 -singlefile -png "${filePath}" "/tmp/ocr_temp"`);
 
-    // OCR mit Tesseract.js (aktuelle Syntax)
-    const worker = await createWorker('deu');
+    const worker = await createWorker();
+    await worker.load();
+    await worker.loadLanguage('deu');
     await worker.initialize('deu');
+
     const { data: { text } } = await worker.recognize(tempImage);
     await worker.terminate();
 
-    // Titel: erste nicht-leere Zeile
+    console.log('OCR Text:', text);
+
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     let title = lines[0] || 'Unbekannt';
     title = title.replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 30);
 
-    // Datum suchen (z.B. 20.08.2025)
     const dateMatch = text.match(/(\d{2}\.\d{2}\.\d{4})/);
     let dateStr = '';
     if (dateMatch) {
