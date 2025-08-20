@@ -1,3 +1,4 @@
+console.log("Skript gestartet");
 const fs = require('fs').promises;
 const path = require('path');
 const { createWorker } = require('tesseract.js');
